@@ -5,14 +5,13 @@ public class App {
 
     public static void main(String[] args) {
 
-        // Synthetic HL7 v2 patient identification segment
+        // Step 1: Synthetic HL7 v2 patient data
         String hl7Message =
             "PID|||10001||SMITH^JOHN||19900115|M";
 
-        // Split the message into fields using the pipe delimiter
+        // Step 2: Extract fields from the HL7 message
         String[] fields = hl7Message.split("\\|", -1);
 
-        // Extract patient details from their HL7 positions
         String patientId = fields[3];
         String[] name = fields[5].split("\\^");
         String lastName = name[0];
@@ -20,18 +19,45 @@ public class App {
         String birthDate = fields[7];
         String gender = fields[8];
 
-        // Convert HL7 birth date to a readable format
+        // Step 3: Convert the date to FHIR format
         String formattedDate =
             birthDate.substring(0, 4) + "-" +
             birthDate.substring(4, 6) + "-" +
             birthDate.substring(6, 8);
 
-        // Display extracted patient information
+        // Step 4: Convert gender to FHIR terminology
+        String fhirGender = switch (gender) {
+            case "M" -> "male";
+            case "F" -> "female";
+            case "O" -> "other";
+            default -> "unknown";
+        };
+
+        // Step 5: Generate a FHIR Patient JSON resource
+        String fhirJson = """
+            {
+              "resourceType": "Patient",
+              "id": "%s",
+              "name": [
+                {
+                  "family": "%s",
+                  "given": ["%s"]
+                }
+              ],
+              "gender": "%s",
+              "birthDate": "%s"
+            }
+            """.formatted(
+                patientId,
+                lastName,
+                firstName,
+                fhirGender,
+                formattedDate
+            );
+
+        // Step 6: Display the result
         System.out.println("=== HealthBridgeETL ===");
-        System.out.println("Patient ID: " + patientId);
-        System.out.println("Patient Name: " + firstName + " " + lastName);
-        System.out.println("Date of Birth: " + formattedDate);
-        System.out.println("Gender: " +
-            (gender.equals("M") ? "Male" : "Female"));
+        System.out.println("HL7 v2 to FHIR Conversion");
+        System.out.println(fhirJson);
     }
 }
